@@ -358,6 +358,7 @@ def p2p_text2image(
         return_type='image',
         height=512, 
         width=512,
+        progress_func=None,
         **kwargs
     ):
 
@@ -385,7 +386,9 @@ def p2p_text2image(
     latent, latents = ptp_utils.init_latent(latent, model, height, width, generator, batch_size)
     model.scheduler.set_timesteps(num_inference_steps)
 
-    for i, t in enumerate(tqdm(model.scheduler.timesteps[-start_control_step:])):
+    pfunc = progress_func if callable(progress_func) else tqdm
+    pbar = pfunc(model.scheduler.timesteps[-start_control_step:])
+    for i, t in enumerate(pbar):
         if uncond_embeddings is not None:
             uncond_embeddings_i = uncond_embeddings[i].expand(*text_embeddings.shape)
             context = torch.cat([uncond_embeddings_i, text_embeddings])
