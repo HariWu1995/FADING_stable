@@ -112,8 +112,6 @@ def parse_args(input_args=None):
         help="Specialization mode, 'finetune_double_prompt'|'finetune_single_prompt'",
     )
 
-
-
     #####
     parser.add_argument(
         "--revision",
@@ -210,8 +208,7 @@ def parse_args(input_args=None):
         type=str,
         default="constant",
         help=(
-            'The scheduler type to use. Choose between ["linear", "cosine", "cosine_with_restarts", "polynomial",'
-            ' "constant", "constant_with_warmup"]'
+            'The scheduler type to use. Choose between ["linear","cosine","cosine_with_restarts","polynomial","constant","constant_with_warmup"]'
         ),
     )
     parser.add_argument(
@@ -304,7 +301,6 @@ def parse_args(input_args=None):
     return args
 
 
-
 #%%
 class DreamBoothDatasetAge(Dataset):
     """
@@ -334,22 +330,18 @@ class DreamBoothDatasetAge(Dataset):
         else:
             self.instance_images_path = [os.path.join(instance_data_root,filename) for filename in os.listdir(instance_data_root)]
 
-
         self.num_instance_images = len(self.instance_images_path)
         self.instance_prompt = instance_prompt
         self._length = self.num_instance_images
 
         self.age_labels = np.load(instance_age_path)
 
-
-        self.image_transforms = transforms.Compose(
-            [
-                transforms.Resize(size, interpolation=transforms.InterpolationMode.BILINEAR),
-                transforms.CenterCrop(size) if center_crop else transforms.RandomCrop(size),
-                transforms.ToTensor(),
-                transforms.Normalize([0.5], [0.5]),
-            ]
-        )
+        self.image_transforms = transforms.Compose([
+            transforms.Resize(size, interpolation=transforms.InterpolationMode.BILINEAR),
+            transforms.CenterCrop(size) if center_crop else transforms.RandomCrop(size),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5], [0.5]),
+        ])
 
 
     def __len__(self):
@@ -364,7 +356,6 @@ class DreamBoothDatasetAge(Dataset):
             instance_image = instance_image.convert("RGB")
 
         example["instance_images"] = self.image_transforms(instance_image)
-
         example["instance_prompt"] = self.instance_prompt
         example["instance_prompt_ids"] = self.tokenizer( # token(photo of a person)
             self.instance_prompt,
@@ -397,9 +388,8 @@ class DreamBoothDatasetAge(Dataset):
             return_tensors="pt",
         ).input_ids
 
-
         return example
-#%
+
 
 def collate_fn(examples, finetune_mode="finetune_double_prompt"):
     if len(examples)!=1:
@@ -437,12 +427,10 @@ def collate_fn(examples, finetune_mode="finetune_double_prompt"):
     batch = {
         "input_ids": input_ids,
         "pixel_values": pixel_values,
-
         "pixel_values_ages": pixel_values_ages,
     }
 
     return batch
-
 
 
 def get_full_repo_name(model_id: str, organization: Optional[str] = None, token: Optional[str] = None):
@@ -455,7 +443,6 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
         return f"{organization}/{model_id}"
 
 
-#%%
 def main(args):
     argparse_dict = vars(args)
 
@@ -467,7 +454,8 @@ def main(args):
 
     logging_dir = Path(args.output_dir, args.logging_dir)
 
-    try: # err: unexpected 'logging_dir' --> changed to 'project_dir'
+    try: 
+        # err: unexpected 'logging_dir' --> changed to 'project_dir'
         accelerator = Accelerator(
             gradient_accumulation_steps=args.gradient_accumulation_steps,
             mixed_precision=args.mixed_precision,
@@ -498,6 +486,7 @@ def main(args):
         level=logging.INFO,
     )
     logger.info(accelerator.state, main_process_only=False)
+
     if accelerator.is_local_main_process:
         # datasets.utils.logging.set_verbosity_warning()
         transformers.utils.logging.set_verbosity_warning()
@@ -531,6 +520,7 @@ def main(args):
     # Load the tokenizer
     if args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name, revision=args.revision, use_fast=False)
+    
     elif args.pretrained_model_name_or_path:
         tokenizer = AutoTokenizer.from_pretrained(
             args.pretrained_model_name_or_path,
@@ -549,6 +539,7 @@ def main(args):
     def pred_original_samples(samples: torch.FloatTensor,
                               noise: torch.FloatTensor,
                               timesteps: torch.IntTensor):
+
         sqrt_alpha_prod = noise_scheduler.alphas_cumprod[timesteps] ** 0.5
         sqrt_alpha_prod = sqrt_alpha_prod.flatten()
         while len(sqrt_alpha_prod.shape) < len(samples.shape):
@@ -600,10 +591,7 @@ def main(args):
         try:
             import bitsandbytes as bnb
         except ImportError:
-            raise ImportError(
-                "To use 8-bit Adam, please install the bitsandbytes library: `pip install bitsandbytes`."
-            )
-
+            raise ImportError("To use 8-bit Adam, please install the bitsandbytes library: `pip install bitsandbytes`.")
         optimizer_class = bnb.optim.AdamW8bit
     else:
         optimizer_class = torch.optim.AdamW
@@ -620,7 +608,6 @@ def main(args):
         eps=args.adam_epsilon,
     )
 
-
     train_dataset = DreamBoothDatasetAge(
         instance_data_root = args.instance_data_dir,
         instance_age_path = args.instance_age_path,
@@ -629,6 +616,7 @@ def main(args):
         size=args.resolution,
         center_crop=args.center_crop,
     )
+
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=args.train_batch_size,
@@ -710,6 +698,7 @@ def main(args):
     logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
     logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
     logger.info(f"  Total optimization steps = {args.max_train_steps}")
+
     global_step = 0
     first_epoch = 0
 
@@ -723,6 +712,7 @@ def main(args):
             dirs = [d for d in dirs if d.startswith("checkpoint")]
             dirs = sorted(dirs, key=lambda x: int(x.split("-")[1]))
             path = dirs[-1]
+
         accelerator.print(f"Resuming from checkpoint {path}")
         accelerator.load_state(os.path.join(args.output_dir, path))
         global_step = int(path.split("-")[1])
@@ -828,16 +818,13 @@ def main(args):
 
     accelerator.end_training()
 
+
 if __name__ == "__main__":
     args = parse_args()
-
     # args.instance_data_dir = 'specialization_data/training_images'
     # args.instance_age_path = 'specialization_data/training_ages.npy'
     #
     # args.output_dir = 'specialized_models/tmp'
 
     main(args)
-
-
-
 
