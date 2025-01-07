@@ -269,24 +269,27 @@ class AttentionReweight(AttentionControlEdit):
         # attn_replace = attn_replace / attn_replace.sum(-1, keepdims=True)
         return attn_replace
 
-    def __init__(self, prompts, num_steps: int, cross_replace_steps: float, self_replace_steps: float,
-                 tokenizer, equalizer,
-                 local_blend: Optional[LocalBlend] = None, controller: Optional[AttentionControlEdit] = None):
+    def __init__(self, prompts, num_steps: int, 
+                       cross_replace_steps: float, 
+                       self_replace_steps: float,
+                       tokenizer, 
+                       equalizer,
+                       local_blend: Optional[LocalBlend] = None, 
+                       controller: Optional[AttentionControlEdit] = None):
         super(AttentionReweight, self).__init__(prompts, num_steps, cross_replace_steps, self_replace_steps,
-                                                tokenizer,
-                                                local_blend)
+                                                tokenizer, local_blend)
         self.equalizer = equalizer.to(device)
         self.prev_controller = controller
 
 
 def get_equalizer(text: str, word_select: Union[int, Tuple[int, ...]], 
-                                  values: Union[List[float], Tuple[float, ...]], tokenizer):
+                                  values: Union[List[float], Tuple[float, ...]], tokenizer, max_length: int = 77):
 
     if type(word_select) is int \
     or type(word_select) is str:
         word_select = (word_select,)
 
-    equalizer = torch.ones(1, 77)
+    equalizer = torch.ones(1, max_length)
     for word, val in zip(word_select, values):
         inds = ptp_utils.get_word_inds(text, word, tokenizer)
         equalizer[:, inds] = val
@@ -299,7 +302,8 @@ def make_controller(prompts: List[str],
                     self_replace_steps: float,
                     tokenizer,
                     blend_words=None, 
-                equalizer_params=None) -> AttentionControlEdit:
+                equalizer_params=None, 
+                    max_length: int = 77) -> AttentionControlEdit:
 
     if blend_words is None:
         blender = None
@@ -321,7 +325,7 @@ def make_controller(prompts: List[str],
 
     if equalizer_params is not None:
         equalizer = get_equalizer(prompts[1], equalizer_params["words"], 
-                                              equalizer_params["values"], tokenizer=tokenizer)
+                                              equalizer_params["values"], tokenizer=tokenizer, max_length)
         controller = AttentionReweight(prompts, NUM_DDIM_STEPS, 
                                        cross_replace_steps=cross_replace_steps,
                                        self_replace_steps=self_replace_steps,
