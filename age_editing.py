@@ -2,9 +2,10 @@ import os
 import argparse
 from diffusers import StableDiffusionPipeline, DDIMScheduler
 
-from FADING_util import util
-from prompt2prompt import *
 from null_inversion import *
+from prompt2prompt import *
+from utilities.util import get_person_placeholder
+
 
 #%%
 parser = argparse.ArgumentParser()
@@ -30,7 +31,7 @@ if not os.path.exists(save_dir):
     os.makedirs(save_dir)
 
 gt_gender = int(gender == 'female')
-person_placeholder = util.get_person_placeholder(age_init, gt_gender)
+person_placeholder = get_person_placeholder(age_init, gt_gender)
 inversion_prompt = f"photo of {age_init} year old {person_placeholder}"
 
 input_img_name = image_path.split('/')[-1].split('.')[-2]
@@ -57,7 +58,7 @@ null_inversion = NullInversion(ldm_stable)
 #%% age editing
 for age_new in target_ages:
     print(f'Age editing with target age {age_new}...')
-    new_person_placeholder = util.get_person_placeholder(age_new, gt_gender)
+    new_person_placeholder = get_person_placeholder(age_new, gt_gender)
     new_prompt = inversion_prompt.replace(person_placeholder, new_person_placeholder)
 
     new_prompt = new_prompt.replace(str(age_init),str(age_new))
