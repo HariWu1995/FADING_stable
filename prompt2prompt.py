@@ -302,29 +302,29 @@ def make_controller(prompts: List[str],
                 equalizer_params=None) -> AttentionControlEdit:
 
     if blend_words is None:
-        lb = None
+        blender = None
     else:
-        lb = LocalBlend(prompts, blend_words, tokenizer=tokenizer)
+        blender = LocalBlend(prompts, blend_words, tokenizer=tokenizer)
 
     if is_replace_controller:
         controller = AttentionReplace(prompts, NUM_DDIM_STEPS, 
                                       cross_replace_steps=cross_replace_steps,
                                       self_replace_steps=self_replace_steps,
                                       tokenizer=tokenizer,
-                                      local_blend=lb)
+                                      local_blend=blender)
     else:
         controller = AttentionRefine(prompts, NUM_DDIM_STEPS, 
                                      cross_replace_steps=cross_replace_steps,
                                      self_replace_steps=self_replace_steps,
                                      tokenizer=tokenizer,
-                                     local_blend=lb)
+                                     local_blend=blender)
 
     if equalizer_params is not None:
         equalizer = get_equalizer(prompts[1], equalizer_params["words"], equalizer_params["values"], tokenizer=tokenizer)
         controller = AttentionReweight(prompts, NUM_DDIM_STEPS, 
                                        cross_replace_steps=cross_replace_steps,
                                        self_replace_steps=self_replace_steps,
-                                       local_blend=lb,
+                                       local_blend=blender,
                                        tokenizer=tokenizer,
                                        equalizer=equalizer, 
                                        controller=controller)
