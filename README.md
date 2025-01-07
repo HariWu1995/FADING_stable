@@ -1,6 +1,7 @@
-# FADING_stable
+# Stable FADING
 
-*stable-version about diffusers-library of FADING based on [official FADING repository by MunchkinChen](https://github.com/MunchkinChen/FADING)*
+* Stable version on [diffusers](https://github.com/huggingface/diffusers) of [FADING](https://github.com/MunchkinChen/FADING).
+* Demo on [Kaggle notebook](https://www.kaggle.com/code/mrriandmstique/agetimelapse)
 
 ## 🔥 Updates
 - 24-04-18 : Add stability about accelerate library
