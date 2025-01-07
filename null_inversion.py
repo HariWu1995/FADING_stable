@@ -1,3 +1,5 @@
+import os
+
 from typing import Union
 from tqdm import tqdm
 from PIL import Image
@@ -14,10 +16,11 @@ import utilities.ptp_utils as ptp_utils
 
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
-LOW_RESOURCE = False
+LOW_RESOURCE = os.environ.get('LOW_RESOURCE', 'False').lower() in ('true','t','1')
+MAX_NUM_WORDS = int(os.environ.get('MAX_NUM_WORDS', '77'))
+
 NUM_DDIM_STEPS = 50
 GUIDANCE_SCALE = 7.5
-MAX_NUM_WORDS = 77
 
 
 def load_512(image_path, left=0, right=0, top=0, bottom=0):

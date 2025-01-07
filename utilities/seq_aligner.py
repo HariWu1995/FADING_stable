@@ -11,8 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import torch
 import numpy as np
+
+
+MAX_NUM_WORDS = int(os.environ.get('MAX_NUM_WORDS', '77'))
 
 
 class ScoreParams:
@@ -104,7 +108,7 @@ def get_aligned_sequences(x, y, trace_back):
     return x_seq, y_seq, torch.tensor(mapper_y_to_x, dtype=torch.int64)
 
 
-def get_mapper(x: str, y: str, tokenizer, max_len=77):
+def get_mapper(x: str, y: str, tokenizer, max_len: int = MAX_NUM_WORDS):
     x_seq = tokenizer.encode(x)
     y_seq = tokenizer.encode(y)
     score = ScoreParams(0, 1, -1)
@@ -118,7 +122,7 @@ def get_mapper(x: str, y: str, tokenizer, max_len=77):
     return mapper, alphas
 
 
-def get_refinement_mapper(prompts, tokenizer, max_len=77):
+def get_refinement_mapper(prompts, tokenizer, max_len: int = MAX_NUM_WORDS):
     x_seq = prompts[0]
     mappers, alphas = [], []
     for i in range(1, len(prompts)):
@@ -149,7 +153,7 @@ def get_word_inds(text: str, word_place: int, tokenizer):
     return np.array(out)
 
 
-def get_replacement_mapper_(x: str, y: str, tokenizer, max_len=77):
+def get_replacement_mapper_(x: str, y: str, tokenizer, max_len: int = MAX_NUM_WORDS):
     words_x = x.split(' ')
     words_y = y.split(' ')
     if len(words_x) != len(words_y):
@@ -185,7 +189,7 @@ def get_replacement_mapper_(x: str, y: str, tokenizer, max_len=77):
     return torch.from_numpy(mapper).float()
 
 
-def get_replacement_mapper(prompts, tokenizer, max_len=77):
+def get_replacement_mapper(prompts, tokenizer, max_len: int = MAX_NUM_WORDS):
     x_seq = prompts[0]
     mappers = []
     for i in range(1, len(prompts)):

@@ -14,9 +14,10 @@ import utilities.seq_aligner as seq_aligner
 
 
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
-LOW_RESOURCE = os.environ.get('LOW_RESOURCE', 'False').lower() in ('true','t','1')
 
-MAX_NUM_WORDS = 50
+LOW_RESOURCE = os.environ.get('LOW_RESOURCE', 'False').lower() in ('true','t','1')
+MAX_NUM_WORDS = int(os.environ.get('MAX_NUM_WORDS', '77'))
+
 NUM_DDIM_STEPS = 50
 GUIDANCE_SCALE = 7.5
 
@@ -224,8 +225,7 @@ class AttentionControlEdit(AttentionStore, abc.ABC):
                  local_blend: Optional[LocalBlend]):
         super(AttentionControlEdit, self).__init__()
         self.batch_size = len(prompts)
-        self.cross_replace_alpha = ptp_utils.get_time_words_attention_alpha(prompts, num_steps, cross_replace_steps,
-                                                                            tokenizer).to(device)
+        self.cross_replace_alpha = ptp_utils.get_time_words_attention_alpha(prompts, num_steps, cross_replace_steps, tokenizer).to(device)
         if type(self_replace_steps) is float:
             self_replace_steps = 0, self_replace_steps
         self.num_self_replace = int(num_steps * self_replace_steps[0]), int(num_steps * self_replace_steps[1])
@@ -277,14 +277,19 @@ class AttentionReweight(AttentionControlEdit):
                        equalizer,
                        local_blend: Optional[LocalBlend] = None, 
                        controller: Optional[AttentionControlEdit] = None):
-        super(AttentionReweight, self).__init__(prompts, num_steps, cross_replace_steps, self_replace_steps,
-                                                tokenizer, local_blend)
+        super(AttentionReweight, self).__init__(
+                                            prompts, num_steps, 
+                                            cross_replace_steps, 
+                                            self_replace_steps,
+                                            tokenizer, 
+                                            local_blend,
+                                        )
         self.equalizer = equalizer.to(device)
         self.prev_controller = controller
 
 
 def get_equalizer(text: str, word_select: Union[int, Tuple[int, ...]], 
-                                  values: Union[List[float], Tuple[float, ...]], tokenizer, max_length: int = 77):
+                                  values: Union[List[float], Tuple[float, ...]], tokenizer, max_length: int = MAX_NUM_WORDS):
 
     if type(word_select) is int \
     or type(word_select) is str:
@@ -304,7 +309,7 @@ def make_controller(prompts: List[str],
                     tokenizer,
                     blend_words=None, 
                 equalizer_params=None, 
-                    max_length: int = 77) -> AttentionControlEdit:
+                    max_length: int = MAX_NUM_WORDS) -> AttentionControlEdit:
 
     if blend_words is None:
         blender = None

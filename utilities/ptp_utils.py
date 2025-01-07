@@ -11,18 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 
-import numpy as np
-import torch
-from PIL import Image, ImageDraw, ImageFont
-import cv2
-from typing import Optional, Union, Tuple, List, Callable, Dict
 from IPython.display import display
 from tqdm.notebook import tqdm
+from typing import Optional, Union, Tuple, List, Callable, Dict
+from PIL import Image, ImageDraw, ImageFont
+
+import cv2
+import numpy as np
+import torch
 import diffusers
+
 
 # managed by this
 DIFFUSERS_OLD = diffusers.__version__ < '0.11' 
+MAX_NUM_WORDS = int(os.environ.get('MAX_NUM_WORDS', '77'))
 
 
 def text_under_image(image: np.ndarray, text: str, text_color: Tuple[int, int, int] = (0, 0, 0)):
@@ -354,11 +358,14 @@ def update_alpha_time_word(alpha, bounds: Union[float, Tuple[float, float]], pro
 
 def get_time_words_attention_alpha(prompts, num_steps,
                                    cross_replace_steps: Union[float, Dict[str, Tuple[float, float]]],
-                                   tokenizer, max_num_words=77):
+                                   tokenizer, max_num_words: int = MAX_NUM_WORDS):
+    
     if type(cross_replace_steps) is not dict:
         cross_replace_steps = {"default_": cross_replace_steps}
+    
     if "default_" not in cross_replace_steps:
         cross_replace_steps["default_"] = (0., 1.)
+
     alpha_time_words = torch.zeros(num_steps + 1, len(prompts) - 1, max_num_words)
     for i in range(len(prompts) - 1):
         alpha_time_words = update_alpha_time_word(alpha_time_words, cross_replace_steps["default_"],
