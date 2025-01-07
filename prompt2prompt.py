@@ -369,7 +369,7 @@ def p2p_text2image(
             context = torch.cat([uncond_embeddings_i, text_embeddings])
         else:
             context = torch.cat([uncond_embeddings_, text_embeddings])
-        latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=True)
+        latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=LOW_RESOURCE)
 
     if return_type == 'image':
         image = ptp_utils.latent2image(model.vae, latents)
