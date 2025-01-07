@@ -339,25 +339,28 @@ def p2p_text2image(
         generator: Optional[torch.Generator] = None,
         latent: Optional[torch.FloatTensor] = None,
         uncond_embeddings=None,
+        context_size=None,
         start_time=50,
         return_type='image',
         height=512, 
         width=512,
+        **kwargs
     ):
 
     tokenizer = model.tokenizer
     batch_size = len(prompt)
+    max_length = context_size if isinstance(context_size, int) else tokenizer.model_max_length
     ptp_utils.register_attention_control(model, controller)
 
     text_input = tokenizer(
         prompt,
         padding="max_length",
-        max_length=tokenizer.model_max_length,
+        max_length=max_length,
         truncation=True,
         return_tensors="pt",
     )
     text_embeddings = model.text_encoder(text_input.input_ids.to(model.device))[0]
-    max_length = text_input.input_ids.shape[-1]
+    # max_length = text_input.input_ids.shape[-1]
 
     if uncond_embeddings is None:
         uncond_input = tokenizer([""] * batch_size, padding="max_length", max_length=max_length, return_tensors="pt")
