@@ -9,13 +9,14 @@ import abc
 import FADING_util.ptp_utils as ptp_utils
 import FADING_util.seq_aligner as seq_aligner
 
-LOW_RESOURCE = False
-NUM_DDIM_STEPS = 50
-GUIDANCE_SCALE = 7.5
-MAX_NUM_WORDS = 77
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
-#%%
+LOW_RESOURCE = False
+MAX_NUM_WORDS = 50
+NUM_DDIM_STEPS = 50
+GUIDANCE_SCALE = 7.5
+
+
 #% Prompt-to-Prompt code
 class LocalBlend:
 

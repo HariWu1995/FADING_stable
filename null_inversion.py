@@ -12,7 +12,7 @@ import FADING_util.ptp_utils as ptp_utils
 
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
-LOW_RESOURCE = True
+LOW_RESOURCE = False
 NUM_DDIM_STEPS = 50
 GUIDANCE_SCALE = 7.5
 MAX_NUM_WORDS = 77
@@ -131,7 +131,7 @@ class NullInversion:
         uncond_embeddings, cond_embeddings = self.context.chunk(2)
         all_latent = [latent]
         latent = latent.clone().detach()
-        for i in range(NUM_DDIM_STEPS):
+        for i in range(self.num_steps):
             t = self.model.scheduler.timesteps[len(self.model.scheduler.timesteps) - i - 1]
             noise_pred = self.get_noise_pred_single(latent, t, cond_embeddings)
             latent = self.next_step(noise_pred, t, latent)
@@ -154,8 +154,8 @@ class NullInversion:
         uncond_embeddings_list = []
         latent_cur = latents[-1]
 
-        bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
-        for i in range(NUM_DDIM_STEPS):
+        bar = tqdm(total=num_inner_steps * self.num_steps)
+        for i in range(self.num_steps):
             uncond_embeddings = uncond_embeddings.clone().detach()
             uncond_embeddings.requires_grad = True
 
@@ -207,11 +207,13 @@ class NullInversion:
         
         return (image_gt, image_rec), ddim_latents[-1], uncond_embeddings
 
-    def __init__(self, model):
+    def __init__(self, model, num_ddim_steps: int = NUM_DDIM_STEPS):
         # scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False,
         #                           set_alpha_to_one=False)
         self.model = model
+        self.model.scheduler.set_timesteps(num_ddim_steps)
         self.tokenizer = self.model.tokenizer
-        self.model.scheduler.set_timesteps(NUM_DDIM_STEPS)
+
         self.prompt = None
         self.context = None
+        self.num_steps = num_ddim_steps
