@@ -324,8 +324,9 @@ def make_controller(prompts: List[str],
                                      local_blend=blender)
 
     if equalizer_params is not None:
-        equalizer = get_equalizer(prompts[1], equalizer_params["words"], 
-                                              equalizer_params["values"], tokenizer=tokenizer, max_length)
+        equalizer = get_equalizer(prompts[1], 
+                        equalizer_params["words"], 
+                        equalizer_params["values"], tokenizer=tokenizer, max_length=max_length)
         controller = AttentionReweight(prompts, NUM_DDIM_STEPS, 
                                        cross_replace_steps=cross_replace_steps,
                                        self_replace_steps=self_replace_steps,
