@@ -14,7 +14,7 @@ import utilities.seq_aligner as seq_aligner
 
 
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
-LOW_RESOURCE = os.environ.get('LOW_RESOURCE', False)
+LOW_RESOURCE = os.environ.get('LOW_RESOURCE', 'False').lower() in ('true','t','1')
 
 MAX_NUM_WORDS = 50
 NUM_DDIM_STEPS = 50
