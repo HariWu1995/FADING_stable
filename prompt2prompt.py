@@ -279,12 +279,14 @@ class AttentionReweight(AttentionControlEdit):
         self.prev_controller = controller
 
 
-def get_equalizer(text: str, word_select: Union[int, Tuple[int, ...]], values: Union[List[float],Tuple[float, ...]],
-                  tokenizer):
-    if type(word_select) is int or type(word_select) is str:
-        word_select = (word_select,)
-    equalizer = torch.ones(1, 77)
+def get_equalizer(text: str, word_select: Union[int, Tuple[int, ...]], 
+                                  values: Union[List[float], Tuple[float, ...]], tokenizer):
 
+    if type(word_select) is int \
+    or type(word_select) is str:
+        word_select = (word_select,)
+
+    equalizer = torch.ones(1, 77)
     for word, val in zip(word_select, values):
         inds = ptp_utils.get_word_inds(text, word, tokenizer)
         equalizer[:, inds] = val
