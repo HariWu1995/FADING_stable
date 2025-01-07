@@ -14,6 +14,7 @@ NUM_DDIM_STEPS = 50
 GUIDANCE_SCALE = 7.5
 MAX_NUM_WORDS = 77
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+
 #%%
 #% Prompt-to-Prompt code
 class LocalBlend:
@@ -44,8 +45,9 @@ class LocalBlend:
             x_t = x_t[:1] + mask * (x_t - x_t[:1])
         return x_t
 
-    def __init__(self, prompts: List[str], words: [List[List[str]]], tokenizer, substruct_words=None, start_blend=0.2,
-                 th=(.3, .3)):
+    def __init__(self, prompts: List[str], words: [List[List[str]]], tokenizer, 
+                    substruct_words=None, start_blend=0.2, th=(.3, .3)):
+
         alpha_layers = torch.zeros(len(prompts), 1, 1, 1, 1, MAX_NUM_WORDS)
         for i, (prompt, words_) in enumerate(zip(prompts, words)):
             if type(words_) is str:
@@ -283,33 +285,40 @@ def get_equalizer(text: str, word_select: Union[int, Tuple[int, ...]], values: U
     return equalizer
 
 
-
-
-def make_controller(prompts: List[str], is_replace_controller: bool,
+def make_controller(prompts: List[str], 
+                    is_replace_controller: bool,
                     cross_replace_steps: Dict[str, float],
                     self_replace_steps: float,
                     tokenizer,
-                    blend_words=None, equilizer_params=None) -> AttentionControlEdit:
+                    blend_words=None, 
+                equalizer_params=None) -> AttentionControlEdit:
+
     if blend_words is None:
         lb = None
     else:
         lb = LocalBlend(prompts, blend_words, tokenizer=tokenizer)
+
     if is_replace_controller:
-        controller = AttentionReplace(prompts, NUM_DDIM_STEPS, cross_replace_steps=cross_replace_steps,
+        controller = AttentionReplace(prompts, NUM_DDIM_STEPS, 
+                                      cross_replace_steps=cross_replace_steps,
                                       self_replace_steps=self_replace_steps,
                                       tokenizer=tokenizer,
                                       local_blend=lb)
     else:
-        controller = AttentionRefine(prompts, NUM_DDIM_STEPS, cross_replace_steps=cross_replace_steps,
+        controller = AttentionRefine(prompts, NUM_DDIM_STEPS, 
+                                     cross_replace_steps=cross_replace_steps,
                                      self_replace_steps=self_replace_steps,
                                      tokenizer=tokenizer,
                                      local_blend=lb)
-    if equilizer_params is not None:
-        eq = get_equalizer(prompts[1], equilizer_params["words"], equilizer_params["values"], tokenizer=tokenizer)
-        controller = AttentionReweight(prompts, NUM_DDIM_STEPS, cross_replace_steps=cross_replace_steps,
+
+    if equalizer_params is not None:
+        equalizer = get_equalizer(prompts[1], equalizer_params["words"], equalizer_params["values"], tokenizer=tokenizer)
+        controller = AttentionReweight(prompts, NUM_DDIM_STEPS, 
+                                       cross_replace_steps=cross_replace_steps,
                                        self_replace_steps=self_replace_steps,
+                                       local_blend=lb,
                                        tokenizer=tokenizer,
-                                       equalizer=eq, local_blend=lb,
+                                       equalizer=equalizer, 
                                        controller=controller)
     return controller
 
@@ -326,8 +335,10 @@ def p2p_text2image(
         uncond_embeddings=None,
         start_time=50,
         return_type='image',
-        height=512, width=512
-):
+        height=512, 
+        width=512,
+    ):
+
     tokenizer = model.tokenizer
     batch_size = len(prompt)
     ptp_utils.register_attention_control(model, controller)
@@ -341,10 +352,9 @@ def p2p_text2image(
     )
     text_embeddings = model.text_encoder(text_input.input_ids.to(model.device))[0]
     max_length = text_input.input_ids.shape[-1]
+
     if uncond_embeddings is None:
-        uncond_input = tokenizer(
-            [""] * batch_size, padding="max_length", max_length=max_length, return_tensors="pt"
-        )
+        uncond_input = tokenizer([""] * batch_size, padding="max_length", max_length=max_length, return_tensors="pt")
         uncond_embeddings_ = model.text_encoder(uncond_input.input_ids.to(model.device))[0]
     else:
         uncond_embeddings_ = None
@@ -353,20 +363,18 @@ def p2p_text2image(
     model.scheduler.set_timesteps(num_inference_steps)
 
     for i, t in enumerate(tqdm(model.scheduler.timesteps[-start_time:])):
-        if uncond_embeddings_ is None:
-            context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
-            # context = torch.cat([uncond_embeddings[i], text_embeddings])  # 我改了
+        if uncond_embeddings is not None:
+            uncond_embeddings_i = uncond_embeddings[i].expand(*text_embeddings.shape)
+            context = torch.cat([uncond_embeddings_i, text_embeddings])
         else:
             context = torch.cat([uncond_embeddings_, text_embeddings])
-        latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False)
+        latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=True)
 
     if return_type == 'image':
         image = ptp_utils.latent2image(model.vae, latents)
-    else:
-        image = latents
-
-    return image, latent
-
+        return image
+    
+    return latent
 
 
 # def run_and_display(my_ldm_stable, prompts, controller, latent=None, run_baseline=False, generator=None, uncond_embeddings=None,
@@ -385,12 +393,6 @@ def p2p_text2image(
 #     return images, x_t
 
 
-
-
-
-
-
-
 def aggregate_attention(prompts, attention_store: AttentionStore, res: int, from_where: List[str], is_cross: bool, select: int):
     out = []
     attention_maps = attention_store.get_average_attention()
@@ -403,6 +405,7 @@ def aggregate_attention(prompts, attention_store: AttentionStore, res: int, from
     out = torch.cat(out, dim=0)
     out = out.sum(0) / out.shape[0]
     return out.cpu()
+
 
 def show_cross_attention(tokenizer, prompts, attention_store: AttentionStore, res: int, from_where: List[str], select: int = 0):
     tokens = tokenizer.encode(prompts[select])
@@ -436,6 +439,5 @@ def show_self_attention_comp(attention_store: AttentionStore, res: int, from_whe
         image = np.array(image)
         images.append(image)
     ptp_utils.view_images(np.concatenate(images, axis=1))
-
 
 #% null inversion
