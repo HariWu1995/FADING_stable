@@ -1,17 +1,20 @@
+import os
+import abc
 from typing import Optional, Union, Tuple, List, Dict
 from tqdm import tqdm
+from PIL import Image
+
+import numpy as np
+
 import torch
 import torch.nn.functional as nnf
-import numpy as np
-from PIL import Image
-import abc
 
 import FADING_util.ptp_utils as ptp_utils
 import FADING_util.seq_aligner as seq_aligner
 
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+LOW_RESOURCE = os.environ.get('LOW_RESOURCE', False)
 
-LOW_RESOURCE = False
 MAX_NUM_WORDS = 50
 NUM_DDIM_STEPS = 50
 GUIDANCE_SCALE = 7.5
@@ -143,8 +146,10 @@ class AttentionStore(AttentionControl):
 
     @staticmethod
     def get_empty_store():
-        return {"down_cross": [], "mid_cross": [], "up_cross": [],
-                "down_self": [], "mid_self": [], "up_self": []}
+        return {
+            "down_cross": [], "mid_cross": [], "up_cross": [],
+            "down_self": [], "mid_self": [], "up_self": [],
+        }
 
     def forward(self, attn, is_cross: bool, place_in_unet: str):
         key = f"{place_in_unet}_{'cross' if is_cross else 'self'}"
